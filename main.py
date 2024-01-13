@@ -30,17 +30,11 @@ async def four_liase(interaction: discord.Interaction):
 
 @tree.command(name="thirst", description="You are thirsty boi")
 async def thirst(interaction: discord.Interaction, thirsty: int=1):
-    thirmst= ":droplet:"
-    for i in range (thirsty-1):
-        thirmst= thirmst+ " :droplet:"
-    await interaction.response.send_message(thirmst)
+    await interaction.response.send_message(randoms.thirst(thirsty))
 
 @tree.command(name="hunger", description="You are hungry boi")
 async def hunger(interaction: discord.Interaction, hungry: int= 1):
-    hung= ":hamburger:"
-    for i in range (hungry-1):
-        hung= hung+ " :hamburger:"
-    await interaction.response.send_message(hung)
+    await interaction.response.send_message(randoms.hunger(hungry))
 
 
 client.run(os.getenv('TOKEN')) # run the bot with the token

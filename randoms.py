@@ -16,3 +16,16 @@ def one_line():
 def aliase():
 	result2= random.choice(aliases)
 	return "".join(result2)
+
+def hunger(numb: int= 1):
+	result3= ""
+	for i in range(numb):
+		result3= result3+ ":hamburger: "
+	return result3
+
+def thirst(num: int= 1):
+	result4= ""
+	for i in range(num):
+		result4= result4+ ":droplet: "
+	return result4
+	
