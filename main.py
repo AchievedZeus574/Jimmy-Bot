@@ -34,7 +34,10 @@ async def thirst(interaction: discord.Interaction, thirsty: int=1):
 
 @tree.command(name="hunger", description="You are hungry boi")
 async def hunger(interaction: discord.Interaction, hungry: int= 1):
-    await interaction.response.send_message(randoms.hunger(hungry))
+    if (hungry>166):
+        await interaction.response.send_message("Max hunger is 166 fatty", ephemeral= True, delete_after=120)
+    else:
+        await interaction.response.send_message(randoms.hunger(hungry))
 
 
 client.run(os.getenv('TOKEN')) # run the bot with the token
