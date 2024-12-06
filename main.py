@@ -54,8 +54,8 @@ class aclient(discord.Client):
 
     async def on_ready(self):
         if not self.synced:
-            await tree.sync(guild=discord.Object(id=TARGET_GUILD_ID))
-            self.synced = True
+                await tree.sync(guild=discord.Object(id=TARGET_GUILD_ID))
+                self.synced = True
         print(f'Logged in as {self.user}')
         self.schedule_post.start()  # Start the scheduled posting loop
 
