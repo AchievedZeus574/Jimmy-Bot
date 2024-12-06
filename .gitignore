@@ -1,2 +1,7 @@
 .env
 __pycache__
+__pycache__
+post_log.txt
+Lib
+Scripts
+pyvenv.cfg
