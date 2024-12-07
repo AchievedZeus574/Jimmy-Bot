@@ -5,9 +5,14 @@ from dotenv import load_dotenv
 import random
 import praw
 from datetime import datetime, time as dtime
+import configparser
 
-# Load environment variables
+# Load environment variables from .env
 load_dotenv()
+
+# Load non-sensitive configuration from config.ini
+config = configparser.ConfigParser()
+config.read("config.ini")
 
 # Reddit Configuration
 reddit = praw.Reddit(
@@ -20,12 +25,12 @@ reddit = praw.Reddit(
 TARGET_CHANNEL_ID = int(os.getenv("TARGET_CHANNEL_ID"))  # Channel ID from .env
 TARGET_GUILD_ID = int(os.getenv("TARGET_GUILD_ID"))      # Server ID from .env
 POST_TIME = dtime(
-    hour=int(os.getenv("POST_HOUR", 12)), 
-    minute=int(os.getenv("POST_MINUTE", 0))
-)  # Scheduled post time (default 12:00 PM)
+    hour=config.getint("bot_settings", "POST_HOUR", fallback=12), 
+    minute=config.getint("bot_settings", "POST_MINUTE", fallback=0)
+)  # Scheduled post time from config.ini
 
-# Subreddit List - Using environment variable for flexibility
-SUBREDDIT_LIST = os.getenv("SUBREDDIT_LIST", "EarthPorn,Art,Memes").split(",")  # Comma-separated list from .env
+# Subreddit List from config.ini
+SUBREDDIT_LIST = config.get("bot_settings", "SUBREDDIT_LIST", fallback="EarthPorn,Art,Memes").split(",")
 
 # Log File
 LOG_FILE = "post_log.txt"
@@ -54,8 +59,8 @@ class aclient(discord.Client):
 
     async def on_ready(self):
         if not self.synced:
-                await tree.sync(guild=discord.Object(id=TARGET_GUILD_ID))
-                self.synced = True
+            await tree.sync(guild=discord.Object(id=TARGET_GUILD_ID))
+            self.synced = True
         print(f'Logged in as {self.user}')
         self.schedule_post.start()  # Start the scheduled posting loop
 
@@ -105,22 +110,22 @@ client = aclient()
 tree = discord.app_commands.CommandTree(client)
 
 # Discord Commands
-@tree.command(name= "1line")
+@tree.command(name="1line")
 async def one_line(interaction: discord.Interaction):
     await interaction.response.send_message(randoms.one_line())
 
-@tree.command(name= "4liase")
+@tree.command(name="4liase")
 async def four_liase(interaction: discord.Interaction):
     await interaction.response.send_message(randoms.aliase())
 
 @tree.command(name="thirst", description="You are thirsty boi")
-async def thirst(interaction: discord.Interaction, thirsty: int=1):
+async def thirst(interaction: discord.Interaction, thirsty: int = 1):
     await interaction.response.send_message(randoms.thirst(thirsty))
 
 @tree.command(name="hunger", description="You are hungry boi")
-async def hunger(interaction: discord.Interaction, hungry: int= 1):
-    if (hungry>166):
-        await interaction.response.send_message("Max hunger is 166 fatty", ephemeral= True, delete_after=120)
+async def hunger(interaction: discord.Interaction, hungry: int = 1):
+    if hungry > 166:
+        await interaction.response.send_message("Max hunger is 166 fatty", ephemeral=True, delete_after=120)
     else:
         await interaction.response.send_message(randoms.hunger(hungry))
 
@@ -142,7 +147,7 @@ async def trigger_post(interaction: discord.Interaction):
         return
 
     await interaction.response.defer(ephemeral=True)  # Defer the response
-    
+
     subreddit_name = random.choice(SUBREDDIT_LIST)
     channel = client.get_channel(TARGET_CHANNEL_ID)
     if channel:
