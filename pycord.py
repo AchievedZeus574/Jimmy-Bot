@@ -28,4 +28,4 @@ async def hello(ctx: discord.ApplicationContext):
     await ctx.respond("Hey, "+ randoms.aliase()+ "!")
 
 #run the bot
-bot.run('MTAwMjM0OTExNzQ3OTA1OTQ1Ng.G5cWj7.ARDo0NVWSE4ZkKUh40D712wzaHnf0Z5P3nCpA0')
+bot.run(os.getenv('TOKEN'))
