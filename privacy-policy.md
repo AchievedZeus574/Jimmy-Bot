@@ -17,4 +17,4 @@
 No, we do not share data with any 3rd parties!
 
 4) **How can users get data removed, or how can users contact the bot owner?**
-They can contact me, `AchievedZeus574` as my friend and DM's are open
+They can contact me, `AchievedZeus574` either by adding me or directly messing me as my DMs are open.
