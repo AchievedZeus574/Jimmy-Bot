@@ -6,9 +6,14 @@ import asyncpraw
 import randoms #used for other functions 
 from random import choice
 import asyncio
+import configparser
 
 #load .env variables
 load_dotenv()
+
+#load config file
+config= configparser.ConfigParser()
+config.read('config.ini')
 
 #enable logging at INFO level
 logger= logging.getLogger('discord')
@@ -53,10 +58,23 @@ async def on_ready():
 async def hello(ctx: discord.ApplicationContext):
     await ctx.respond("Hey, "+ randoms.aliase()+ "!")
 
+@bot.slash_command(name="1line", description="Spit out a random one liner")
+async def one_liner(ctx: discord.ApplicationContext):
+    await ctx.respond(randoms.one_line())
+
+@bot.slash_command(name="4liase", description="Give a random aliase")
+async def four_liase(ctx: discord.ApplicationContext):
+    await ctx.respond(randoms.aliase())
 @bot.slash_command(name="random", description="Grab random image from best of a SubReddit of your choosing")
 async def random(ctx, subreddit: discord.Option(discord.SlashCommandOptionType.string)):
     url= await post_grab(subreddit)
     await ctx.respond(url)
+
+@bot.slash_command(name="triggerpost", description="Trigger posting of CotD")
+async def CotDM(ctx):
+    await ctx.defer()
+    post= await post_grab()
+    await ctx.respond(f'Post failed')
 
 #run the bot
 bot.run(os.getenv('TOKEN'))
