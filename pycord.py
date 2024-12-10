@@ -15,6 +15,11 @@ load_dotenv()
 config= configparser.ConfigParser()
 config.read('config.ini')
 
+#get settings from config.ini
+SubList= config.get("bot_settings", "SUBREDDIT_LIST", fallback="cats, cat").split(",")
+CotD_CiD= int(os.getenv('TARGET_CHANNEL_ID'))
+print(CotD_CiD)
+
 #enable logging at INFO level
 logger= logging.getLogger('discord')
 logger.setLevel(logging.INFO)
@@ -45,6 +50,22 @@ async def post_grab(sub):
         return f"An error occured {str(e)}"
 
 
+#post CotD in channel of choosing then increment counter
+async def auto_post(CiD= CotD_CiD):
+    try:
+        CotD_channel= bot.get_channel(CiD)
+        if CotD_channel is None:
+            print("Channel not found.")
+            return
+        #get post from reddit and send it
+        post= await post_grab(choice(SubList))
+        await CotD_channel.send(post)
+    except ValueError:
+        print(f'Invalid Channel ID')
+    except Exception as e:
+        print(f'Error: {e}')
+
+
 #create bot and get it ready on startup
 bot= discord.Bot()
 
@@ -73,8 +94,9 @@ async def random(ctx, subreddit: discord.Option(discord.SlashCommandOptionType.s
 @bot.slash_command(name="triggerpost", description="Trigger posting of CotD")
 async def CotDM(ctx):
     await ctx.defer()
-    post= await post_grab()
-    await ctx.respond(f'Post failed')
+    post= await auto_post()
+    await ctx.followup.send("Posted")
+    #await ctx.respond(f'Post failed')
 
 #run the bot
 bot.run(os.getenv('TOKEN'))
