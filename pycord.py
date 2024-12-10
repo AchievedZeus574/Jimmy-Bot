@@ -21,10 +21,11 @@ CotD_CiD= int(os.getenv('TARGET_CHANNEL_ID'))
 print(CotD_CiD)
 
 #enable logging at INFO level
-logger= logging.getLogger('discord')
-logger.setLevel(logging.INFO)
-handler= logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+logger = logging.getLogger('discord')
+logger.setLevel(logging.INFO) # can be set to CRITICAL, ERROR, WARNING, INFO, and DEBUG
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 #grab information for async praw
 reddit= asyncpraw.Reddit(
@@ -93,10 +94,10 @@ async def random(ctx, subreddit: discord.Option(discord.SlashCommandOptionType.s
 
 @bot.slash_command(name="triggerpost", description="Trigger posting of CotD")
 async def CotDM(ctx):
-    await ctx.defer()
+    #Cat_Channel= f'<#CotD_CiD
+    await ctx.defer(ephemeral= True)
     post= await auto_post()
-    await ctx.followup.send("Posted")
-    #await ctx.respond(f'Post failed')
+    await ctx.followup.send(f"Posted in <#{CotD_CiD}>")
 
 #run the bot
 bot.run(os.getenv('TOKEN'))
