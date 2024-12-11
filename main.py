@@ -88,6 +88,7 @@ async def autopost():
             TargetTime+= timedelta(days= 1)
         delay= (TargetTime- now).total_seconds()
         await asyncio.sleep(delay)
+        await Post_CotD()
 
 #create bot and get it ready on startup
 bot= discord.Bot()
