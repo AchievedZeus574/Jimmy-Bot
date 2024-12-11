@@ -12,6 +12,7 @@ from datetime import date, datetime, timedelta
 
 #load .env variables
 load_dotenv()
+CotD_Day= int(os.getenv('START_DAY_NUMBER'))
 
 #load config file
 config= configparser.ConfigParser()
@@ -31,11 +32,13 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w'
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-#enable logging for CotD autopost
+#enable logging for CotD autopost and increment counter
 CotD_Log= "CotD_Log.log"
 def CotD_Logging(CotDinfo):
+    global CotD_Day
     with open("CotD_Log.log", "a") as log:
-        log.write(f'Date: {date.today()}, Subreddit: {CotDinfo.subreddit.display_name}, Post ID: {CotDinfo.id}\n')
+        log.write(f'Date: {date.today()}, Subreddit: {CotDinfo.subreddit.display_name}, Post ID: {CotDinfo.id}, Day: {CotD_Day}\n')
+    CotD_Day= CotD_Day+1
 
 #grab information for async praw
 reddit= asyncpraw.Reddit(
@@ -60,7 +63,7 @@ async def post_grab(sub):
     except Exception as e:
         return f"An error occured {str(e)}"
 
-#post CotD in channel of choosing then increment counter
+#post CotD in channel of choosing and log it
 async def Post_CotD(CiD= CotD_CiD):
     try:
         CotD_channel= bot.get_channel(CiD)
@@ -69,7 +72,7 @@ async def Post_CotD(CiD= CotD_CiD):
             return
         #get post from reddit and send it
         post= await post_grab(choice(SubList))
-        await CotD_channel.send(f'Cat of the Day x: {post.title} \n{post.url}')
+        await CotD_channel.send(f'Cat of the Day {CotD_Day}: {post.title} \n{post.url}')
         CotD_Logging(post)
     except ValueError:
         print(f'Invalid Channel ID')
