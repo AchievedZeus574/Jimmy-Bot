@@ -1,8 +1,9 @@
 .env
 __pycache__
 post_log.txt
-post_log.txt
 Lib
 Scripts
 pyvenv.cfg
 clear.py
+discord.log
+CotD_Log.log

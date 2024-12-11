@@ -1,171 +1,127 @@
 import discord
-from discord.ext import tasks
+from discord.ext import commands
 import os
 from dotenv import load_dotenv
-import random
-import praw
-from datetime import datetime, time as dtime
+import logging
+import asyncpraw
+import randoms #used for other functions 
+from random import choice
+import asyncio
 import configparser
+from datetime import date, datetime, timedelta
 
-# Load environment variables from .env
+#load .env variables
 load_dotenv()
+CotD_Day= int(os.getenv('START_DAY_NUMBER'))
 
-# Load non-sensitive configuration from config.ini
-config = configparser.ConfigParser()
-config.read("config.ini")
+#load config file
+config= configparser.ConfigParser()
+config.read('config.ini')
 
-# Reddit Configuration
-reddit = praw.Reddit(
-    client_id=os.getenv("REDDIT_CLIENT_ID"),
-    client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
-    user_agent=os.getenv("REDDIT_USER_AGENT")
+#get settings from config.ini
+SubList= config.get("bot_settings", "SUBREDDIT_LIST", fallback="cats, cat").split(",")
+CotD_CiD= int(os.getenv('TARGET_CHANNEL_ID'))
+PostTime= int(config.get("bot_settings", "POST_HOUR", fallback= 12))
+LogLevel = getattr(logging, config.get('bot_settings', 'LOG_LEVEL', fallback='WARNING').upper(), logging.WARNING)
+AllowedRole= config.get("bot_settings", "COTD_ROLE")
+
+#enable logging for pycord
+logger = logging.getLogger('discord')
+logger.setLevel(LogLevel)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
+
+#enable logging for CotD autopost and increment counter
+CotD_Log= "CotD_Log.log"
+def CotD_Logging(CotDinfo):
+    global CotD_Day
+    with open("CotD_Log.log", "a") as log:
+        log.write(f'Date: {date.today()}, Subreddit: {CotDinfo.subreddit.display_name}, Post ID: {CotDinfo.id}, Day: {CotD_Day}\n')
+    CotD_Day= CotD_Day+1
+
+#grab information for async praw
+reddit= asyncpraw.Reddit(
+    client_id= os.getenv('REDDIT_CLIENT_ID'),
+    client_secret= os.getenv('REDDIT_CLIENT_SECRET'),
+    user_agent= os.getenv('REDDIT_USER_AGENT')
 )
 
-# Discord Configuration
-TARGET_CHANNEL_ID = int(os.getenv("TARGET_CHANNEL_ID"))  # Channel ID from .env
-TARGET_GUILD_ID = int(os.getenv("TARGET_GUILD_ID"))      # Server ID from .env
-POST_TIME = dtime(
-    hour=config.getint("bot_settings", "POST_HOUR", fallback=12), 
-    minute=config.getint("bot_settings", "POST_MINUTE", fallback=0)
-)  # Scheduled post time from config.ini
-
-# Subreddit List from config.ini
-SUBREDDIT_LIST = config.get("bot_settings", "SUBREDDIT_LIST", fallback="EarthPorn,Art,Memes").split(",")
-
-# Log File
-LOG_FILE = "post_log.txt"
-
-# Helper function to log the post with subreddit, post id, and date
-def log_post(post_id, date_posted, subreddit_name):
-    with open(LOG_FILE, "a") as log:
-        log.write(f"Post ID: {post_id}, Subreddit: {subreddit_name}, Date: {date_posted}\n")
-
-# Function to update the starting day number in the .env file
-def update_day_number(day_number):
-    with open(".env", "r") as file:
-        lines = file.readlines()
-
-    with open(".env", "w") as file:
-        for line in lines:
-            if line.startswith("START_DAY_NUMBER"):
-                file.write(f"START_DAY_NUMBER={day_number}\n")
-            else:
-                file.write(line)
-
-class aclient(discord.Client):
-    def __init__(self):
-        super().__init__(intents=discord.Intents.default())
-        self.synced = False
-
-    async def on_ready(self):
-        if not self.synced:
-            await tree.sync(guild=discord.Object(id=TARGET_GUILD_ID))
-            self.synced = True
-        print(f'Logged in as {self.user}')
-        self.schedule_post.start()  # Start the scheduled posting loop
-
-    async def fetch_random_image(self, subreddit_name):
-        try:
-            subreddit = reddit.subreddit(subreddit_name)
-            posts = subreddit.hot(limit=100)
-            image_posts = [post for post in posts if post.url.endswith(('.jpg', '.png', '.jpeg'))]
-
-            if image_posts:
-                random_post = random.choice(image_posts)
-                title = random_post.title
-                post_id = random_post.id
-                return title, post_id, random_post.url
-            else:
-                return None, None, f"No image posts found in r/{subreddit_name}."
-        except Exception as e:
-            return None, None, f"An error occurred: {str(e)}"
-
-    @tasks.loop(minutes=1)
-    async def schedule_post(self):
-        """Check the time every minute and post at the scheduled time."""
-        now = datetime.now().time()
-        if now.hour == POST_TIME.hour and now.minute == POST_TIME.minute:
-            channel = self.get_channel(TARGET_CHANNEL_ID)
-            if channel:
-                # Get the starting day number from the .env file
-                start_day_number = int(os.getenv("START_DAY_NUMBER", "367"))
-
-                # Select a random subreddit from the list
-                subreddit_name = random.choice(SUBREDDIT_LIST)
-                title, post_id, image_url = await self.fetch_random_image(subreddit_name)
-                if title:
-                    post_number = start_day_number  # Use the current starting day number
-                    message = f"Cat of the Day {post_number}: {title}\n{image_url}"
-                    await channel.send(message)
-
-                    # Log the post ID, subreddit, and date
-                    log_post(post_id, datetime.now().strftime("%Y-%m-%d"), subreddit_name)
-
-                    # Update the starting day number for the next post
-                    update_day_number(post_number + 1)
-                else:
-                    await channel.send(image_url)
-
-client = aclient()
-tree = discord.app_commands.CommandTree(client)
-
-# Discord Commands
-@tree.command(name="1line")
-async def one_line(interaction: discord.Interaction):
-    await interaction.response.send_message(randoms.one_line())
-
-@tree.command(name="4liase")
-async def four_liase(interaction: discord.Interaction):
-    await interaction.response.send_message(randoms.aliase())
-
-@tree.command(name="thirst", description="You are thirsty boi")
-async def thirst(interaction: discord.Interaction, thirsty: int = 1):
-    await interaction.response.send_message(randoms.thirst(thirsty))
-
-@tree.command(name="hunger", description="You are hungry boi")
-async def hunger(interaction: discord.Interaction, hungry: int = 1):
-    if hungry > 166:
-        await interaction.response.send_message("Max hunger is 166 fatty", ephemeral=True, delete_after=120)
-    else:
-        await interaction.response.send_message(randoms.hunger(hungry))
-
-@tree.command(name="randomimage", description="Fetch a random image from a subreddit")
-async def random_image(interaction: discord.Interaction, subreddit_name: str):
-    title, post_id, image_url = await client.fetch_random_image(subreddit_name)
-    if title:
-        await interaction.response.send_message(f"Cat of the Day: {title}\n{image_url}")
-    else:
-        await interaction.response.send_message(image_url)
-
-@tree.command(name="triggerpost", description="Manually post a random image to the target channel")
-async def trigger_post(interaction: discord.Interaction):
-    """Manually trigger a post to the target channel."""
-    allowed_users = [608813834492313603]
-
-    if interaction.user.id not in allowed_users:
-        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)
-        return
-
-    await interaction.response.defer(ephemeral=True)  # Defer the response
-
-    subreddit_name = random.choice(SUBREDDIT_LIST)
-    channel = client.get_channel(TARGET_CHANNEL_ID)
-    if channel:
-        title, post_id, image_url = await client.fetch_random_image(subreddit_name)
-        if title:
-            start_day_number = int(os.getenv("START_DAY_NUMBER", "1"))
-            post_number = start_day_number
-            message = f"Cat of the Day {post_number}: {title}\n{image_url}"
-            await channel.send(message)
-
-            log_post(post_id, datetime.now().strftime("%Y-%m-%d"), subreddit_name)
-            update_day_number(post_number + 1)
-
-            await interaction.followup.send(f"Successfully posted an image from r/{subreddit_name} to the target channel!", ephemeral=True)
+#grab random image from reddit specified by command
+async def post_grab(sub):
+    try:
+        subreddit= await reddit.subreddit(sub)
+        posts= [
+            post async for post in subreddit.hot(limit=25)
+            if post.url.endswith(('.jpg', '.png', '.jpeg'))
+        ]
+        if posts:
+            random_post= choice(posts)
+            return random_post
         else:
-            await interaction.followup.send(image_url, ephemeral=True)
-    else:
-        await interaction.followup.send("Target channel not found. Please check the configuration.", ephemeral=True)
+            return f"No image posts found in r/{sub}."
+    except Exception as e:
+        return f"An error occured {str(e)}"
 
-# Run the bot
-client.run(os.getenv('TOKEN'))
+#post CotD in channel of choosing and log it
+async def Post_CotD(CiD= CotD_CiD):
+    try:
+        CotD_channel= bot.get_channel(CiD)
+        if CotD_channel is None:
+            print("Channel not found.")
+            return
+        #get post from reddit and send it
+        post= await post_grab(choice(SubList))
+        await CotD_channel.send(f'Cat of the Day {CotD_Day}: {post.title} \n{post.url}')
+        CotD_Logging(post)
+    except ValueError:
+        print(f'Invalid Channel ID')
+    except Exception as e:
+        print(f'Error: {e}')
+
+#schedule the CotD Post to run once a day at PostTime
+async def autopost():
+    while True:
+        now= datetime.now()
+        TargetTime= now.replace(hour= PostTime)
+        if now >= TargetTime:
+            TargetTime+= timedelta(days= 1)
+        delay= (TargetTime- now).total_seconds()
+        await asyncio.sleep(delay)
+        await Post_CotD()
+
+#create bot and get it ready on startup
+bot= discord.Bot()
+
+@bot.event
+async def on_ready():
+    print(f'{bot.user} ready')
+    await bot.sync_commands()
+    bot.loop.create_task(autopost())
+
+#commands for bot
+@bot.slash_command(name="hello", description="say hi to Jeff")
+async def hello(ctx: discord.ApplicationContext):
+    await ctx.respond("Hey, "+ randoms.aliase()+ "!")
+
+@bot.slash_command(name="1line", description="Spit out a random one liner")
+async def one_liner(ctx: discord.ApplicationContext):
+    await ctx.respond(randoms.one_line())
+
+@bot.slash_command(name="4liase", description="Give a random aliase")
+async def four_liase(ctx: discord.ApplicationContext):
+    await ctx.respond(randoms.aliase())
+@bot.slash_command(name="random", description="Grab random image from best of a SubReddit of your choosing")
+async def random(ctx, subreddit: discord.Option(discord.SlashCommandOptionType.string)):
+    url= await post_grab(subreddit)
+    await ctx.respond(url.url)
+
+@bot.slash_command(name="triggerpost", description="Trigger posting of CotD")
+#@commands.has_role(AllowedRole)
+async def CotDM(ctx):
+    await ctx.defer(ephemeral= True)
+    post= await Post_CotD()
+    await ctx.followup.send(f"Posted in <#{CotD_CiD}>")
+
+#run the bot
+bot.run(os.getenv('TOKEN'))
