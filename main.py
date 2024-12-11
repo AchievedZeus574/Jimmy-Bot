@@ -120,8 +120,12 @@ async def random(ctx, subreddit: discord.Option(discord.SlashCommandOptionType.s
 #@commands.has_role(AllowedRole)
 async def CotDM(ctx):
     await ctx.defer(ephemeral= True)
-    post= await Post_CotD()
-    await ctx.followup.send(f"Posted in <#{CotD_CiD}>")
+    try:
+        await Post_CotD()
+        await ctx.followup.send(f"Posted in <#{CotD_CiD}>")
+    except Exception as e:
+        logger.error(f"Error in /triggerpost: {e}")
+        await ctx.followup.send(f"Error: {e}")
 
 #run the bot
 bot.run(os.getenv('TOKEN'))
