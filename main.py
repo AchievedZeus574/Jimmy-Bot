@@ -7,6 +7,7 @@ import randoms #used for other functions
 from random import choice
 import asyncio
 import configparser
+from datetime import date
 
 #load .env variables
 load_dotenv()
@@ -18,14 +19,21 @@ config.read('config.ini')
 #get settings from config.ini
 SubList= config.get("bot_settings", "SUBREDDIT_LIST", fallback="cats, cat").split(",")
 CotD_CiD= int(os.getenv('TARGET_CHANNEL_ID'))
-print(CotD_CiD)
+PostTime= config.get("bot_settings", "POST_HOUR", fallback= 12)
+LogLevel = getattr(logging, config.get('bot_settings', 'LOG_LEVEL', fallback='WARNING').upper(), logging.WARNING)
 
-#enable logging at INFO level
+#enable logging for pycord
 logger = logging.getLogger('discord')
-logger.setLevel(logging.INFO) # can be set to CRITICAL, ERROR, WARNING, INFO, and DEBUG
+logger.setLevel(LogLevel)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
+
+#enable logging for CotD autopost
+CotD_Log= "CotD_Log.log"
+def CotD_Logging(CotDinfo, Sub):
+    with open("CotD_Log.log", "a") as log:
+        log.write(f'Date: {date.today()}, Subreddit: {Sub}, Post ID: \n')
 
 #grab information for async praw
 reddit= asyncpraw.Reddit(
@@ -44,7 +52,7 @@ async def post_grab(sub):
         ]
         if posts:
             random_post= choice(posts)
-            return random_post.url
+            return random_post
         else:
             return f"No image posts found in r/{sub}."
     except Exception as e:
@@ -59,8 +67,10 @@ async def auto_post(CiD= CotD_CiD):
             print("Channel not found.")
             return
         #get post from reddit and send it
-        post= await post_grab(choice(SubList))
-        await CotD_channel.send(post)
+        RanSub= choice(SubList)
+        post= await post_grab(RanSub)
+        await CotD_channel.send(post.url)
+        CotD_Logging(post, RanSub)
     except ValueError:
         print(f'Invalid Channel ID')
     except Exception as e:
@@ -90,7 +100,7 @@ async def four_liase(ctx: discord.ApplicationContext):
 @bot.slash_command(name="random", description="Grab random image from best of a SubReddit of your choosing")
 async def random(ctx, subreddit: discord.Option(discord.SlashCommandOptionType.string)):
     url= await post_grab(subreddit)
-    await ctx.respond(url)
+    await ctx.respond(url.url)
 
 @bot.slash_command(name="triggerpost", description="Trigger posting of CotD")
 async def CotDM(ctx):
