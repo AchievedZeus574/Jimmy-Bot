@@ -69,7 +69,7 @@ async def Post_CotD(CiD= CotD_CiD):
             return
         #get post from reddit and send it
         post= await post_grab(choice(SubList))
-        await CotD_channel.send(post.url)
+        await CotD_channel.send(f'Cat of the Day x: {post.title} \n{post.url}')
         CotD_Logging(post)
     except ValueError:
         print(f'Invalid Channel ID')
