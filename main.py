@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 import logging
 import asyncpraw
-import randoms #used for other functions 
+import randoms #used for other functions
 from random import choice
 import asyncio
 import configparser
@@ -35,10 +35,12 @@ logger.addHandler(handler)
 #enable logging for CotD autopost and increment counter
 CotD_Log= "CotD_Log.log"
 def CotD_Logging(CotDinfo):
+    print("CotD_Logging")
     global CotD_Day
     with open("CotD_Log.log", "a") as log:
         log.write(f'Date: {date.today()}, Subreddit: {CotDinfo.subreddit.display_name}, Post ID: {CotDinfo.id}, Day: {CotD_Day}\n')
     CotD_Day= CotD_Day+1
+    print("CotD_Logging done")
 
 #grab information for async praw
 reddit= asyncpraw.Reddit(
@@ -49,6 +51,7 @@ reddit= asyncpraw.Reddit(
 
 #grab random image from reddit specified by command
 async def post_grab(sub):
+    print("post_grab")
     try:
         subreddit= await reddit.subreddit(sub)
         posts= [
@@ -57,6 +60,7 @@ async def post_grab(sub):
         ]
         if posts:
             random_post= choice(posts)
+            print ("post_grab done")
             return random_post
         else:
             return f"No image posts found in r/{sub}."
@@ -65,6 +69,7 @@ async def post_grab(sub):
 
 #post CotD in channel of choosing and log it
 async def Post_CotD(CiD= CotD_CiD):
+    print ("Post_CotD")
     try:
         CotD_channel= bot.get_channel(CiD)
         if CotD_channel is None:
@@ -72,12 +77,15 @@ async def Post_CotD(CiD= CotD_CiD):
             return
         #get post from reddit and send it
         post= await post_grab(choice(SubList))
+        print ("Sending CotD")
         await CotD_channel.send(f'Cat of the Day {CotD_Day}: {post.title} \n{post.url}')
+        print ("Sent CotD")
         CotD_Logging(post)
     except ValueError:
         print(f'Invalid Channel ID')
     except Exception as e:
         print(f'Error: {e}')
+    print("Post_CotD done")
 
 #schedule the CotD Post to run once a day at PostTime
 async def autopost():
@@ -119,6 +127,7 @@ async def random(ctx, subreddit: discord.Option(discord.SlashCommandOptionType.s
 @bot.slash_command(name="triggerpost", description="Trigger posting of CotD")
 #@commands.has_role(AllowedRole)
 async def CotDM(ctx):
+    print ("triggerpost")
     await ctx.defer(ephemeral= True)
     try:
         await Post_CotD()
@@ -126,6 +135,7 @@ async def CotDM(ctx):
     except Exception as e:
         logger.error(f"Error in /triggerpost: {e}")
         await ctx.followup.send(f"Error: {e}")
+    print ("triggerpost done")
 
 #run the bot
 bot.run(os.getenv('TOKEN'))
