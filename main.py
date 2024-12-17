@@ -141,7 +141,7 @@ async def subreddit_autocomplete(ctx: discord.AutocompleteContext):
     matches = [sub for sub in SUBREDDIT_LIST if ctx.value.lower() in sub.lower()]
     return matches[:25]  # Limit the suggestions to 25
 
-@bot.slash_command(name="Sub_Refresh", description= "Refresh top subreddits")
+@bot.slash_command(name="sub_refresh", description= "Refresh top subreddits")
 async def refresh(ctx: discord.ApplicationContext):
     global SUBREDDIT_LIST
     SUBREDDIT_LIST= await fetch_subs()
