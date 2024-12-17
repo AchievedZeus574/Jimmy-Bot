@@ -49,6 +49,12 @@ reddit= asyncpraw.Reddit(
     user_agent= os.getenv('REDDIT_USER_AGENT')
 )
 
+async def fetch_subs():
+    subreddit_list= []
+    async for subreddit in reddit.subreddits.popular(limit= 100):
+        subreddit_list.append(subreddit.display_name)
+    return subreddit_list
+
 #grab random image from reddit specified by command
 async def post_grab(sub):
     print("post_grab")
@@ -110,8 +116,10 @@ bot= discord.Bot()
 @bot.event
 async def on_ready():
     global autopost_task
+    global SUBREDDIT_LIST
     print(f'{bot.user} ready')
     await bot.sync_commands()
+    SUBREDDIT_LIST = await fetch_subs()
     if autopost_task is None or autopost_task.done():
         autopost_task= bot.loop.create_task(autopost())
 
@@ -128,8 +136,15 @@ async def one_liner(ctx: discord.ApplicationContext):
 async def four_liase(ctx: discord.ApplicationContext):
     await ctx.respond(randoms.aliase())
 
+async def subreddit_autocomplete(ctx: discord.AutocompleteContext):
+    # Filter subreddit list based on the current input
+    matches = [sub for sub in SUBREDDIT_LIST if ctx.value.lower() in sub.lower()]
+    return matches[:25]  # Limit the suggestions to 25
+
 @bot.slash_command(name="random", description="Grab random image from best of a SubReddit of your choosing")
-async def random(ctx, subreddit: discord.Option(discord.SlashCommandOptionType.string)):
+async def random(
+    ctx, 
+    subreddit: discord.Option(str, "Enter a subreddit", autocomplete= subreddit_autocomplete)):
     await ctx.defer()
     result= await post_grab(subreddit)
     if isinstance(result, str):
