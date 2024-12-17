@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 import logging
 import asyncpraw
-import randoms #used for other functions
+import randoms #used for other functions 
 from random import choice
 import asyncio
 import configparser
@@ -56,7 +56,7 @@ async def post_grab(sub):
         subreddit= await reddit.subreddit(sub)
         posts= [
             post async for post in subreddit.hot(limit=25)
-            if post.url.endswith(('.jpg', '.png', '.jpeg'))
+            if post.url.endswith(('.jpg', '.png', '.jpeg', '.mp4'))
         ]
         if posts:
             random_post= choice(posts)
@@ -68,44 +68,52 @@ async def post_grab(sub):
         return f"An error occured {str(e)}"
 
 #post CotD in channel of choosing and log it
+post_lock= asyncio.Lock()
 async def Post_CotD(CiD= CotD_CiD):
     print ("Post_CotD")
-    try:
-        CotD_channel= bot.get_channel(CiD)
-        if CotD_channel is None:
-            print("Channel not found.")
-            return
-        #get post from reddit and send it
-        post= await post_grab(choice(SubList))
-        print ("Sending CotD")
-        await CotD_channel.send(f'Cat of the Day {CotD_Day}: {post.title} \n{post.url}')
-        print ("Sent CotD")
-        CotD_Logging(post)
-    except ValueError:
-        print(f'Invalid Channel ID')
-    except Exception as e:
-        print(f'Error: {e}')
-    print("Post_CotD done")
+    async with post_lock:
+        try:
+            CotD_channel= bot.get_channel(CiD)
+            if CotD_channel is None:
+                print("Channel not found.")
+                return
+            #get post from reddit and send it
+            post= await post_grab(choice(SubList))
+            print ("Sending CotD")
+            await CotD_channel.send(f'Cat of the Day {CotD_Day}: {post.title} \n{post.url}')
+            print ("Sent CotD")
+            CotD_Logging(post)
+        except ValueError:
+            print(f'Invalid Channel ID')
+        except Exception as e:
+            print(f'Error: {e}')
+        print("Post_CotD done")
 
 #schedule the CotD Post to run once a day at PostTime
+autopost_task= None
 async def autopost():
     while True:
         now= datetime.now()
-        TargetTime= now.replace(hour= PostTime)
+        TargetTime= now.replace(hour=PostTime, minute=0, second=0, microsecond=0)
         if now >= TargetTime:
             TargetTime+= timedelta(days= 1)
         delay= (TargetTime- now).total_seconds()
         await asyncio.sleep(delay)
-        await Post_CotD()
+        try:
+            await Post_CotD()
+        except Exception as e:
+            logger.error(f'Error in autpost: {e}')
 
 #create bot and get it ready on startup
 bot= discord.Bot()
 
 @bot.event
 async def on_ready():
+    global autopost_task
     print(f'{bot.user} ready')
     await bot.sync_commands()
-    bot.loop.create_task(autopost())
+    if autopost_task is None or autopost_task.done():
+        autopost_task= bot.loop.create_task(autopost())
 
 #commands for bot
 @bot.slash_command(name="hello", description="say hi to Jeff")
@@ -119,19 +127,27 @@ async def one_liner(ctx: discord.ApplicationContext):
 @bot.slash_command(name="4liase", description="Give a random aliase")
 async def four_liase(ctx: discord.ApplicationContext):
     await ctx.respond(randoms.aliase())
+
 @bot.slash_command(name="random", description="Grab random image from best of a SubReddit of your choosing")
 async def random(ctx, subreddit: discord.Option(discord.SlashCommandOptionType.string)):
-    url= await post_grab(subreddit)
-    await ctx.respond(url.url)
+    await ctx.defer()
+    result= await post_grab(subreddit)
+    if isinstance(result, str):
+        await ctx.followup.send(result)
+    else:
+        await ctx.followup.send(f'{result.title}\n{result.url}')
 
 @bot.slash_command(name="triggerpost", description="Trigger posting of CotD")
 #@commands.has_role(AllowedRole)
 async def CotDM(ctx):
-    print ("triggerpost")
+    print (f'Interaction recieved: {ctx.interaction.id}')
     await ctx.defer(ephemeral= True)
     try:
         await Post_CotD()
         await ctx.followup.send(f"Posted in <#{CotD_CiD}>")
+    except discord.errors.NotFound:
+        print (f'Unknown interaction: {ctx.interaction.id}')
+        await ctx.followup.send ("Interaction timed out.")
     except Exception as e:
         logger.error(f"Error in /triggerpost: {e}")
         await ctx.followup.send(f"Error: {e}")
