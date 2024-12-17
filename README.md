@@ -18,9 +18,4 @@ REDDIT_USER_AGENT=
 TARGET_CHANNEL_ID=
 TARGET_GUILD_ID=
 START_DAY_NUMBER=1
-
-# Default Subreddit and Post Time
-SUBREDDIT_LIST=kittens,Catloaf,cat,cats,cromch
-POST_HOUR=12
-POST_MINUTE=0
 ```
