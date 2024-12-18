@@ -1,8 +1,8 @@
 import random
 import csv
 
-file1 = open("1lines.csv", "r", encoding="utf8")
-one_lines = list(csv.reader(file1, delimiter="$"))
+file1 = open("1lines.tsv", "r", encoding="utf8")
+one_lines = list(csv.reader(file1, delimiter="\n"))
 file1.close()
 
 file2= open("4liases.csv", "r", encoding= "utf8")
@@ -30,4 +30,3 @@ def thirst(num: int= 1):
 	for i in range(num):
 		result4= result4+ ":droplet: "
 	return result4
-	
