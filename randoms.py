@@ -5,8 +5,8 @@ file1 = open("1lines.tsv", "r", encoding="utf8")
 one_lines = list(csv.reader(file1, delimiter="\n"))
 file1.close()
 
-file2= open("4liases.csv", "r", encoding= "utf8")
-aliases= list(csv.reader(file2, delimiter= "$"))
+file2= open("4liases.tsv", "r", encoding= "utf8")
+aliases= list(csv.reader(file2, delimiter= "\n"))
 file2.close()
 
 foods= [":grapes:", ":watermelon:", ":banana:", ":apple:", ":cheese:", ":hamburger:",":fries:", ":pizza:", ":bacon:", ":pretzel:", ":beans:", ":sandwich:", ":taco:", ":salt:", ":doughnut:", ":lobster:", ":shrimp:"]
